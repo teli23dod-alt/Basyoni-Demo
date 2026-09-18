@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0F2A3D">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Basyouni Port">
+<title>Basyouni — Live Port AI Simulation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800;900&family=Tajawal:wght@400;500;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F4F7FA; --panel:#FFFFFF; --line:#E4E9F0; --ink:#0F2A3D; --ink-2:#5C7488; --ink-3:#93A5B8;
+    --accent:#0E7BB8; --accent-2:#12B8A6; --warn:#F2A73B; --danger:#E24B4A;
+    --f-display:'Cairo',sans-serif; --f-body:'Tajawal',sans-serif; --f-mono:'JetBrains Mono',monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html{-webkit-text-size-adjust:100%;}
+  body{overscroll-behavior-y:none;-webkit-font-smoothing:antialiased;}
+
+  /* ===== تجربة أبلكيشن على الموبايل ===== */
+  @media(max-width:768px){
+    .wrap{padding:18px 14px 110px;}
+    h1{font-size:20px;}
+    header p{font-size:12.5px;}
+    .sim-arena{padding:18px 14px;}
+    .card{padding:18px 16px;border-radius:14px;}
+    .lang-btn{padding:8px 12px;font-size:12.5px;}
+    .btn{padding:17px;font-size:16px;min-height:52px;border-radius:12px;}
+    .upload-zone{padding:34px 16px;}
+    input[type=url]{padding:15px 14px;font-size:16px;} /* يمنع زووم الآيفون التلقائي */
+    #fbComment{font-size:16px;min-height:96px;padding:14px;}
+    .star{font-size:40px;padding:6px;}
+    textarea,input,button{font-size:16px;}
+    .fields-grid{grid-template-columns:1fr 1fr !important;}
+    .port-box span{font-size:14px;}
+    .port-box strong{font-size:10px;}
+    .vessel-lane{height:70px;}
+    .feedback-card{padding:20px 16px;}
+  }
+
+  /* شريط سفلي ثابت للأزرار المهمة على الموبايل */
+  @media(max-width:768px){
+    .ports-grid{gap:16px;}
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;}
+  .wrap{max-width:1320px;margin:0 auto;padding:28px 22px 60px;}
+  
+  header{text-align:center;margin-bottom:16px;}
+  .logo-row{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;}
+  .logo-icon{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;}
+  h1{font-family:var(--f-display);font-weight:800;font-size:26px;}
+  header p{color:var(--ink-2);font-size:14px;margin-top:4px;}
+  
+  /* Language Bar with Active Flag */
+  .lang-bar{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:10px;flex-wrap:wrap;}
+  .lang-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--line);border-radius:20px;background:#fff;font-family:var(--f-body);font-size:13px;font-weight:700;color:var(--ink-2);cursor:pointer;transition:all 0.2s ease;}
+  .lang-btn:hover{border-color:var(--accent);color:var(--ink);}
+  .lang-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 2px 6px rgba(14,123,184,0.25);}
+  .lang-flag{width:22px;height:16px;border-radius:2px;object-fit:cover;}
+
+  /* --- المطبخ العملي: محاكاة حركة المركب والكونتينر بين الميناءين --- */
+  .sim-arena {
+    background: linear-gradient(135deg, #0F2A3D, #163C54);
+    color: #fff;
+    border-radius: 14px;
+    padding: 22px 28px;
+    margin-bottom: 24px;
+    box-shadow: 0 6px 20px rgba(15,42,61,0.15);
+    position: relative;
+    overflow: hidden;
+  }
+  .sim-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    font-size: 15px;
+    font-family: var(--f-display);
+    color: var(--accent-2);
+  }
+  .sim-track {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr 1fr;
+    align-items: center;
+    gap: 15px;
+    text-align: center;
+    position: relative;
+  }
+  .port-box {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .port-box span { font-size: 17px; color: #fff; display: block; font-family: var(--f-display); font-weight: 800; }
+  .port-box strong { font-size: 11px; font-family: var(--f-mono); color: var(--ink-3); font-weight: 600; letter-spacing:.5px; }
+  
+  /* مسار المركب والكونتينر المتحرك */
+  .vessel-lane {
+    position: relative;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 2px dashed rgba(18,184,166,0.3);
+  }
+  .vessel-unit {
+    position: absolute;
+    transition: all 1s ease-in-out;
+    left: 10%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(14, 123, 184, 0.4);
+    padding: 7px 14px;
+    border-radius: 24px;
+    border: 1px solid var(--accent-2);
+  }
+  .vessel-unit.moving { left: 70%; }
+  .vessel-unit .ship-flag { width: 24px; height: 18px; border-radius: 2px; object-fit: cover; }
+  .vessel-unit .ship-icon { font-size: 26px; }
+  .container-box {
+    font-size: 12px;
+    background: var(--warn);
+    color: #0F2A3D;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: var(--f-mono);
+    font-weight: 750;
+    display: none;
+  }
+  .container-box.active { display: inline-block; animation: pulseContainer 1s infinite; }
+  @keyframes pulseContainer { 0%,100%{transform:scale(1);} 50%{transform:scale(1.08);} }
+
+  /* الشاشات الثنائية (Input & Output) */
+  .ports-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 22px;
+  }
+  @media(max-width: 768px) { .ports-grid { grid-template-columns: 1fr; } .fields-grid { grid-template-columns: 1fr 1fr; } }
+  @media(max-width: 520px) { .fields-grid { grid-template-columns: 1fr; } }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 24px; box-shadow: 0 4px 14px rgba(15,42,61,0.05); display: flex; flex-direction: column; justify-content: space-between; }
+  .card h2 { font-family: var(--f-display); font-weight: 800; font-size: 17px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .port-badge { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); color: #fff; font-size: 13px; display: flex; align-items: center; justify-content: center; font-family: var(--f-mono); }
+
+  .upload-zone { border: 2px dashed var(--line); border-radius: 12px; padding: 28px; text-align: center; cursor: pointer; transition: .2s; }
+  .upload-zone:hover { border-color: var(--accent-2); background: rgba(18,184,166,0.04); }
+  .upload-zone.dragover { border-color: var(--accent-2); background: rgba(18,184,166,0.08); transform: scale(1.01); }
+  .upload-zone p { font-weight: 700; font-size: 15px; }
+  .upload-zone small { color: var(--ink-3); font-size: 12px; }
+  #fileInput { display: none; }
+  .file-chip { display: none; align-items: center; justify-content: space-between; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; margin-top: 8px; font-size: 13px; }
+  .file-chip button { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 13px; }
+
+  .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-family: var(--f-display); font-weight: 700; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; color: #fff; text-decoration: none; margin-top: 10px; }
+  .btn-primary { background: linear-gradient(135deg, var(--warn), #D98C1E); }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-secondary { background: linear-gradient(135deg, var(--accent-2), #0D9488); }
+
+  .spinner { width: 12px; height: 12px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .summary-box { background: var(--bg); border-radius: 10px; padding: 14px; margin-top: 12px; font-size: 13px; line-height: 1.6; display: none; }
+  .fields-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 12px; display: none; }
+  .field-row { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-size: 12px; }
+  .field-row .k { color: var(--ink-2); display: block; margin-bottom: 2px; }
+  .field-row .v { font-family: var(--f-mono); font-weight: 700; color: var(--accent); }
+
+  input[type=url] { width: 100%; padding: 13px 14px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: var(--f-body); margin-bottom: 10px; background: var(--bg); color: var(--ink); }
+  .disabled-card { opacity: .4; pointer-events: none; }
+
+  .result-shot { width: 100%; border-radius: 8px; border: 1px solid var(--line); margin-top: 10px; display: none; }
+  .filled-list { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; display: none; }
+  .filled-tag { background: rgba(18,184,166,0.12); color: var(--accent-2); border: 1px solid rgba(18,184,166,0.3); border-radius: 20px; padding: 4px 12px; font-size: 12px; font-family: var(--f-mono); }
+
+  .error-box { background: rgba(226,75,74,0.08); border: 1px solid rgba(226,75,74,0.3); color: var(--danger); border-radius: 10px; padding: 12px 14px; font-size: 13px; margin-top: 12px; display: none; }
+  footer { text-align: center; margin-top: 30px; color: var(--ink-3); font-size: 12px; }
+
+  /* ===== الرادار المتحرك ===== */
+  .radar-wrap{position:absolute;top:14px;inset-inline-end:14px;width:110px;height:110px;opacity:.9;pointer-events:none;z-index:2;}
+  .radar{width:100%;height:100%;border-radius:50%;position:relative;overflow:hidden;
+    background:radial-gradient(circle,rgba(18,184,166,.14) 0%,rgba(15,42,61,.55) 75%);
+    border:2px solid rgba(18,184,166,.45);box-shadow:0 0 20px rgba(18,184,166,.25),inset 0 0 22px rgba(18,184,166,.18);}
+  .radar .ring{position:absolute;border:1px solid rgba(18,184,166,.3);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);}
+  .radar .r1{width:70%;height:70%;}
+  .radar .r2{width:42%;height:42%;}
+  .radar .cross-h,.radar .cross-v{position:absolute;background:rgba(18,184,166,.25);}
+  .radar .cross-h{left:0;right:0;top:50%;height:1px;}
+  .radar .cross-v{top:0;bottom:0;left:50%;width:1px;}
+  .radar .sweep{position:absolute;inset:0;border-radius:50%;
+    background:conic-gradient(from 0deg,rgba(18,184,166,.55) 0deg,transparent 70deg,transparent 360deg);
+    animation:radarSweep 3.2s linear infinite;}
+  .radar .blip{position:absolute;width:7px;height:7px;border-radius:50%;background:var(--accent-2);
+    box-shadow:0 0 8px var(--accent-2);animation:blipPing 3.2s ease-out infinite;}
+  .radar .blip.b1{top:26%;left:60%;animation-delay:.4s;}
+  .radar .blip.b2{top:62%;left:30%;animation-delay:1.5s;}
+  .radar .blip.b3{top:48%;left:74%;animation-delay:2.4s;}
+  @keyframes radarSweep{to{transform:rotate(360deg);}}
+  @keyframes blipPing{0%,12%{opacity:1;transform:scale(1.35);}55%{opacity:.35;transform:scale(1);}100%{opacity:1;transform:scale(1.35);}}
+  /* نبضة الرادار لما المركب تتحرك */
+  .sim-arena.transiting .radar{border-color:var(--warn);animation:radarAlert 1s ease-in-out infinite;}
+  .sim-arena.transiting .radar .sweep{background:conic-gradient(from 0deg,rgba(242,167,59,.6) 0deg,transparent 70deg,transparent 360deg);}
+  @keyframes radarAlert{0%,100%{box-shadow:0 0 20px rgba(242,167,59,.3);}50%{box-shadow:0 0 34px rgba(242,167,59,.6);}}
+
+  /* ===== موجات البحر تحت مسار المركب ===== */
+  .vessel-lane{overflow:hidden;}
+  .vessel-lane::before{content:"";position:absolute;left:-50%;right:-50%;bottom:-4px;height:16px;
+    background:radial-gradient(circle at 10px 0px,rgba(18,184,166,.35) 3px,transparent 4px);
+    background-size:34px 16px;animation:wavesMove 5s linear infinite;}
+  @keyframes wavesMove{to{transform:translateX(34px);}}
+
+  /* ===== هزيان المركب مع الأمواج ===== */
+  .vessel-unit{animation:vesselBob 2.6s ease-in-out infinite;}
+  .vessel-unit.moving{animation:vesselBob 2.6s ease-in-out infinite,vesselWake 1.2s linear infinite;}
+  @keyframes vesselBob{0%,100%{transform:translateY(0) rotate(-1.5deg);}50%{transform:translateY(-4px) rotate(1.5deg);}}
+  @keyframes vesselWake{0%,100%{filter:drop-shadow(0 0 4px rgba(18,184,166,.4));}50%{filter:drop-shadow(0 0 12px rgba(18,184,166,.9));}}
+
+  /* ===== بوابات صغيرة على جانبي المسار ===== */
+  .lane-gate{position:absolute;top:50%;transform:translateY(-50%);font-size:18px;opacity:.6;z-index:1;}
+  .lane-gate.g-in{inset-inline-start:6px;}
+  .lane-gate.g-out{inset-inline-end:6px;}
+
+  /* ===== هيدر وشعار أجمل ===== */
+  .logo-icon{box-shadow:0 6px 18px rgba(14,123,184,.35);animation:logoFloat 4s ease-in-out infinite;}
+  @keyframes logoFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
+  h1{background:linear-gradient(135deg,var(--ink) 30%,var(--accent));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+  .sim-arena{background:linear-gradient(160deg,#0F2A3D 0%,#14405C 55%,#0D3B4A 100%);}
+  .sim-arena::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 120%,rgba(18,184,166,.12),transparent 60%);}
+  .sim-header,.sim-track{position:relative;z-index:2;}
+  .port-box{transition:all .4s ease;}
+  .sim-arena.loaded .port-box:first-child{border-color:var(--accent-2);box-shadow:0 0 16px rgba(18,184,166,.35);}
+  .sim-arena.done .port-box:last-child{border-color:var(--accent-2);box-shadow:0 0 16px rgba(18,184,166,.35);background:rgba(18,184,166,.12);}
+  #simStateText{transition:color .3s ease;}
+  .lang-btn{transition:all .25s ease;}
+  .lang-btn:hover{transform:translateY(-2px);}
+  .card{transition:box-shadow .3s ease,transform .3s ease;}
+  .card:hover{box-shadow:0 10px 30px rgba(15,42,61,.12);}
+  .btn{transition:all .25s ease;box-shadow:0 4px 12px rgba(15,42,61,.15);}
+  .btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 20px rgba(15,42,61,.25);}
+  .btn:active:not(:disabled){transform:translateY(0);}
+  .result-shot{box-shadow:0 6px 18px rgba(15,42,61,.15);}
+  @media(max-width:768px){.radar-wrap{width:78px;height:78px;top:10px;inset-inline-end:10px;}}
+
+
+  /* ===== قسم التقييم ===== */
+  .feedback-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;margin-top:22px;box-shadow:0 4px 14px rgba(15,42,61,.05);text-align:center;}
+  .feedback-card h2{font-family:var(--f-display);font-weight:800;font-size:17px;margin-bottom:6px;}
+  .feedback-card>p{font-size:13px;color:var(--ink-2);margin-bottom:14px;}
+  .stars{display:flex;justify-content:center;gap:8px;margin-bottom:14px;}
+  .star{font-size:34px;cursor:pointer;filter:grayscale(1);opacity:.35;transition:all .18s ease;user-select:none;line-height:1;}
+  .star:hover{transform:scale(1.25) rotate(-8deg);opacity:.8;filter:grayscale(.4);}
+  .star.lit{filter:none;opacity:1;transform:scale(1.1);text-shadow:0 3px 10px rgba(242,167,59,.45);}
+  .stars:hover .star{filter:none;opacity:.6;}
+  .stars .star.lit{opacity:1;}
+  .stars .star:hover{opacity:1;}
+  #fbComment{width:100%;min-height:76px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;font-family:var(--f-body);font-size:13px;background:var(--bg);color:var(--ink);resize:vertical;margin-bottom:4px;}
+  #fbComment:focus{outline:none;border-color:var(--accent-2);}
+  .fb-thanks{display:none;margin-top:12px;font-size:14px;font-weight:700;color:var(--accent-2);animation:thanksPop .4s ease;}
+  @keyframes thanksPop{0%{transform:scale(.6);opacity:0;}100%{transform:scale(1);opacity:1;}}
+  .fb-avg{display:inline-block;margin-top:10px;background:rgba(18,184,166,.1);border:1px solid rgba(18,184,166,.3);color:var(--accent-2);border-radius:20px;padding:4px 14px;font-size:12px;font-weight:700;font-family:var(--f-mono);}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo-row">
+      <div class="logo-icon">⚓</div>
+      <h1>Basyouni — Live Port Simulation</h1>
+    </div>
+    <p id="headerDesc">تتبع رحلة البيانات العملية: من ملف الإدخال، شحن الكونتينر على المركب، وحتى التفريغ التلقائي في السيستم</p>
+    
+    <!-- شريط اللغات مع أعلام الدول -->
+    <div class="lang-bar" id="langBar">
+      <button class="lang-btn active" data-lang="ar" data-flag="https://flagcdn.com/w40/eg.png"><img class="lang-flag" src="https://flagcdn.com/w40/eg.png" alt="مصر"> مصر</button>
+      <button class="lang-btn" data-lang="en" data-flag="https://flagcdn.com/w40/gb.png"><img class="lang-flag" src="https://flagcdn.com/w40/gb.png" alt="English"> English</button>
+      <button class="lang-btn" data-lang="zh" data-flag="https://flagcdn.com/w40/cn.png"><img class="lang-flag" src="https://flagcdn.com/w40/cn.png" alt="中文"> 中文</button>
+      <button class="lang-btn" data-lang="de" data-flag="https://flagcdn.com/w40/de.png"><img class="lang-flag" src="https://flagcdn.com/w40/de.png" alt="Deutsch"> Deutsch</button>
+      <button class="lang-btn" data-lang="ru" data-flag="https://flagcdn.com/w40/ru.png"><img class="lang-flag" src="https://flagcdn.com/w40/ru.png" alt="Русский"> Русский</button>
+      <button class="lang-btn" data-lang="el" data-flag="https://flagcdn.com/w40/gr.png"><img class="lang-flag" src="https://flagcdn.com/w40/gr.png" alt="Ελληνικά"> Ελληνικά</button>
+      <button class="lang-btn" data-lang="tr" data-flag="https://flagcdn.com/w40/tr.png"><img class="lang-flag" src="https://flagcdn.com/w40/tr.png" alt="Türkçe"> Türkçe</button>
+      <button class="lang-btn" data-lang="es" data-flag="https://flagcdn.com/w40/es.png"><img class="lang-flag" src="https://flagcdn.com/w40/es.png" alt="Español"> Español</button>
+      <button class="lang-btn" data-lang="fr" data-flag="https://flagcdn.com/w40/fr.png"><img class="lang-flag" src="https://flagcdn.com/w40/fr.png" alt="Français"> Français</button>
+      <button class="lang-btn" data-lang="it" data-flag="https://flagcdn.com/w40/it.png"><img class="lang-flag" src="https://flagcdn.com/w40/it.png" alt="Italiano"> Italiano</button>
+    </div>
+  </header>
+
+  <!-- مساحة المحاكاة الملاحية الحية (Live Simulation Arena) -->
+  <div class="sim-arena" id="simArena">
+    <div class="radar-wrap" aria-hidden="true">
+      <div class="radar">
+        <span class="ring r1"></span><span class="ring r2"></span>
+        <span class="cross-h"></span><span class="cross-v"></span>
+        <span class="sweep"></span>
+        <span class="blip b1"></span><span class="blip b2"></span><span class="blip b3"></span>
+      </div>
+    </div>
+    <div class="sim-header">
+      <span id="simStatusTitle">⚓ محاكاة الميناء الملاحي المباشر</span>
+      <span id="simStateText" style="color:var(--warn);">في انتظار رفع المستند...</span>
+    </div>
+    <div class="sim-track">
+      <div class="port-box">
+        <span id="portInSub">الإسكندرية</span>
+        <strong id="portInLabel">Folder Input</strong>
+      </div>
+      <div class="vessel-lane">
+        <span class="lane-gate g-in">⚓</span>
+        <span class="lane-gate g-out">🏗️</span>
+        <!-- المركب وعليها علم الدولة المختارة والكونتينر -->
+        <div class="vessel-unit" id="vesselUnit">
+          <img id="activeFlag" class="ship-flag" src="https://flagcdn.com/w40/eg.png" alt="Flag">
+          <span class="ship-icon">🚢</span>
+          <div class="container-box" id="containerBox">📦 40ft Data Container</div>
+        </div>
+      </div>
+      <div class="port-box">
+        <span id="portOutSub">قناة السويس</span>
+        <strong id="portOutLabel">System Output</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- الشاشات: ميناء الإدخال وميناء الوصول -->
+  <div class="ports-grid">
+    
+    <!-- 1. ميناء الإدخال (Input) -->
+    <div class="card">
+      <div>
+        <h2><span class="port-badge">IN</span> <span id="card1Title">ميناء الإدخال (Folder In)</span></h2>
+        <div class="upload-zone" id="dropZone">
+          <p id="dropText">📄 اسحب مستند الشحن هنا أو اضغط للاختيار</p>
+          <small id="dropSub">PDF أو Word أو صورة مستند الشحن</small>
+        </div>
+        <input type="file" id="fileInput" accept=".pdf,.png,.jpg,.jpeg,.webp">
+        <div class="file-chip" id="fileChip">
+          <span id="fileName"></span>
+          <button id="removeFileBtn">✕</button>
+        </div>
+      </div>
+      <div>
+        <button class="btn btn-primary" id="parseBtn" disabled>
+          <span id="parseBtnText">🧠 استخراج البيانات وشحنها على المركب (AI)</span>
+        </button>
+        <div class="summary-box" id="summaryBox"></div>
+        <div class="fields-grid" id="fieldsGrid"></div>
+        <div class="error-box" id="parseError"></div>
+      </div>
+    </div>
+
+    <!-- 2. ميناء الوصول (Output) -->
+    <div class="card disabled-card" id="fillCard">
+      <div>
+        <h2><span class="port-badge" style="background:var(--accent-2);">OUT</span> <span id="card2Title">ميناء الوصول وتفريغ السيستم (System Output)</span></h2>
+        <input type="url" id="urlInput" placeholder="أدخل رابط السيستم المستهدف — https://example.com/shipping-form">
+        <p style="font-size:13px; color:var(--ink-2); margin-bottom:12px;" id="outputHint">سيقوم الـ AI Agent بنقل المركب وتفريغ الكونتينر تلقائياً في الحقول عبر Playwright.</p>
+      </div>
+      <div>
+        <button class="btn btn-secondary" id="fillBtn">
+          <span id="fillBtnText">⚡ نقل المركب وتفريغ البيانات في السيستم</span>
+        </button>
+        <img class="result-shot" id="resultShot" alt="صورة شاشة السيستم بعد التعبئة">
+        <div class="filled-list" id="filledList"></div>
+        <div class="error-box" id="fillError"></div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ⭐ قسم التقييم -->
+  <div class="feedback-card" id="feedbackCard">
+    <h2 id="fbTitle">⭐ قيّم التجربة</h2>
+    <p id="fbHint">اضغط على النجوم وأضف رأيك (اختياري) — تقييمك يوصل صاحب التجربة على طول</p>
+    <div class="stars" id="stars">
+      <span class="star" data-v="1">⭐</span><span class="star" data-v="2">⭐</span><span class="star" data-v="3">⭐</span><span class="star" data-v="4">⭐</span><span class="star" data-v="5">⭐</span>
+    </div>
+    <textarea id="fbComment" placeholder="اكتب رأيك هنا... (مثلاً: اشتغل معايا؟ فين المشكلة؟)"></textarea>
+    <button class="btn btn-secondary" id="fbSend" style="max-width:280px;margin:10px auto 0;">
+      <span id="fbSendText">📨 إرسال التقييم</span>
+    </button>
+    <div class="error-box" id="fbError"></div>
+    <div class="fb-thanks" id="fbThanks"></div>
+  </div>
+
+  <footer>Basyouni AI Maritime Logistics — Live Simulation</footer>
+</div>
+
+<script>
+const translations = {
+  ar: {
+    fbPickStar: "اختر عدد النجوم الأول ⭐",
+    fbTitle: "⭐ قيّم التجربة",
+    fbHint: "اضغط على النجوم وأضف رأيك (اختياري) — تقييمك يوصل صاحب التجربة على طول",
+    fbPh: "اكتب رأيك هنا... (مسموح بالحروف والأرقام و @ . , فقط)",
+    fbSend: "📨 إرسال التقييم",
+    fbThanks: "✅ شكراً! وصلنا تقييمك بنجاح.",
+    fbErr: "❌ حصل خطأ أثناء الإرسال — جرّب تاني.",
+    errNoUrl: "⚠️ أدخل رابط السيستم أولاً قبل تفريغ البيانات.",
+    urlPh: "أدخل رابط السيستم المستهدف — https://example.com/shipping-form",
+    portInName: "الإسكندرية", portOutName: "قناة السويس",
+    receivedFile: "تم استلام المستند في ميناء الإدخال بنجاح. اضغط زر الاستخراج للشحن.",
+    extracting: "جاري استخراج وشحن البيانات...",
+    sailing: "المركب تتحرك وتفرغ السيستم...",
+    errConn: "خطأ في الاتصال بميناء الإدخال.",
+    errUnload: "خطأ في تفريغ الحاوية بميناء الوصول.",
+    headerDesc: "تتبع رحلة البيانات العملية: من ملف الإدخال، شحن الكونتينر على المركب، وحتى التفريغ التلقائي في السيستم",
+    simStatusTitle: "⚓ محاكاة الميناء الملاحي المباشر",
+    waitFile: "في انتظار رفع المستند في ميناء الإدخال...",
+    loadedState: "تم تجهيز البيانات وشحن الكونتينر على المركب بنجاح! جاهز للإبحار إلى ميناء الوصول.",
+    transitingState: "المركب تبحر الآن نحو ميناء الوصول لتفريغ الكونتينر في السيستم...",
+    doneState: "تم إفراغ الكونتينر وتعبئة السيستم بنجاح تام وعرض النتيجة!",
+    portInSub: "Folder Input", portInLabel: "ميناء الإدخال",
+    portOutSub: "System Output", portOutLabel: "ميناء الوصول",
+    card1Title: "ميناء الإدخال (Folder In)",
+    dropText: "📄 اسحب مستند الشحن هنا أو اضغط للاختيار",
+    dropSub: "PDF أو صورة (PNG/JPG/WEBP) — الـ PDF بيتقري بصرياً",
+    parse: "🧠 استخراج البيانات وشحنها على المركب (AI)",
+    card2Title: "ميناء الوصول وتفريغ السيستم (System Output)",
+    outputHint: "سيقوم الـ AI Agent بنقل المركب وتفريغ الكونتينر تلقائياً في الحقول عبر Playwright.",
+    fill: "⚡ نقل المركب وتفريغ البيانات في السيستم"
+  },
+  en: {
+    fbPickStar: "Pick a star rating first ⭐",
+    fbTitle: "⭐ Rate this demo",
+    fbHint: "Tap the stars and add your feedback (optional) — it goes straight to the owner",
+    fbPh: "Your feedback here... (e.g. did it work? what went wrong?)",
+    fbSend: "📨 Send feedback",
+    fbThanks: "✅ Thanks! Your feedback was received.",
+    fbErr: "❌ Failed to send — please try again.",
+    errNoUrl: "⚠️ Enter the system URL before discharging data.",
+    urlPh: "Enter target system URL — https://example.com/shipping-form",
+    portInName: "Southampton", portOutName: "Felixstowe",
+    receivedFile: "Document received at Input Port successfully. Click extract to load.",
+    extracting: "Extracting & loading data...",
+    sailing: "Vessel moving & discharging into system...",
+    errConn: "Connection error at Input Port.",
+    errUnload: "Error discharging container at Output Port.",
+    headerDesc: "Track operational data journey: From input folder, vessel container loading, to system auto-discharge",
+    simStatusTitle: "⚓ Live Maritime Port Simulation",
+    waitFile: "Waiting for document upload at Input Port...",
+    loadedState: "Data extracted & container loaded onto vessel successfully! Ready to sail.",
+    transitingState: "Vessel sailing towards Output Port to discharge container into system...",
+    doneState: "Container discharged and system successfully filled with screenshot result!",
+    portInSub: "Folder Input", portInLabel: "Input Port",
+    portOutSub: "System Output", portOutLabel: "Output Port",
+    card1Title: "Input Port (Folder In)",
+    dropText: "📄 Drop shipping document here or click to select",
+    dropSub: "PDF or image (PNG/JPG/WEBP) — PDF is scanned visually",
+    parse: "🧠 Extract Data & Load Vessel (AI)",
+    card2Title: "System Output Port",
+    outputHint: "AI Agent will sail the vessel and auto-discharge container into target system fields via Playwright.",
+    fill: "⚡ Sail Vessel & Discharge into System"
+  },
+  zh: {
+    fbPickStar: "请先选择星级 ⭐",
+    fbTitle: "⭐ 评价演示",
+    fbHint: "点击星星并留下反馈（可选）——会直接发送给站长",
+    fbPh: "在此填写反馈...（例如：能用吗？出了什么问题？）",
+    fbSend: "📨 提交反馈",
+    fbThanks: "✅ 感谢！已收到您的反馈。",
+    fbErr: "❌ 发送失败，请重试。",
+    errNoUrl: "⚠️ 请先输入系统网址再卸货。",
+    urlPh: "输入目标系统网址 — https://example.com/shipping-form",
+    portInName: "上海", portOutName: "深圳",
+    receivedFile: "单据已成功抵达输入港。点击提取进行装船。",
+    extracting: "正在提取并装载数据...",
+    sailing: "船舶正在移动并向系统卸货...",
+    errConn: "输入港连接错误。",
+    errUnload: "在输出港卸载集装箱时出错。",
+    headerDesc: "追踪运营数据旅程：从输入文件夹、集装箱装船到系统自动卸货",
+    simStatusTitle: "⚓ 实时航运港口模拟",
+    waitFile: "等待在输入港上传单据...",
+    loadedState: "数据已提取，集装箱已成功装船！准备起航。",
+    transitingState: "船舶正驶向输出港，准备将集装箱卸载至系统...",
+    doneState: "集装箱已卸载，系统填写完毕并展示截图结果！",
+    portInSub: "Folder Input", portInLabel: "输入港",
+    portOutSub: "System Output", portOutLabel: "输出港",
+    card1Title: "输入港 (Folder In)",
+    dropText: "📄 将单据拖放到此处或点击选择",
+    dropSub: "支持 PDF, Word 或运单图片",
+    parse: "🧠 提取数据并装载至船舶 (AI)",
+    card2Title: "系统输出港",
+    outputHint: "AI Agent 将驾驶船舶通过 Playwright 自动将集装箱内容卸载至目标系统。",
+    fill: "⚡ 驾驶船舶并卸载至系统"
+  },
+  de: {
+    fbPickStar: "Bitte erst Sterne wählen ⭐",
+    fbTitle: "⭐ Demo bewerten",
+    fbHint: "Tippe auf die Sterne und schreibe dein Feedback (optional)",
+    fbPh: "Dein Feedback hier... (z.B. hat es funktioniert?)",
+    fbSend: "📨 Feedback senden",
+    fbThanks: "✅ Danke! Dein Feedback ist angekommen.",
+    fbErr: "❌ Senden fehlgeschlagen — bitte erneut versuchen.",
+    errNoUrl: "⚠️ Bitte zuerst die System-URL eingeben.",
+    urlPh: "Zielsystem-URL eingeben — https://example.com/shipping-form",
+    portInName: "Hamburg", portOutName: "Bremerhaven",
+    receivedFile: "Dokument erfolgreich im Eingangshafen erhalten. Klicken Sie auf Extrahieren.",
+    extracting: "Daten werden extrahiert & verladen...",
+    sailing: "Schiff bewegt sich & entlädt ins System...",
+    errConn: "Verbindungsfehler im Eingangshafen.",
+    errUnload: "Fehler beim Entladen im Ausgangshafen.",
+    headerDesc: "Datenreise verfolgen: Vom Eingangsordner, Container-Beladung auf dem Schiff bis zur System-Entladung",
+    simStatusTitle: "⚓ Live-Hafenhafen-Simulation",
+    waitFile: "Warte auf Dokumenten-Upload am Eingangshafen...",
+    loadedState: "Daten extrahiert & Container erfolgreich verladen! Bereit zur Abfahrt.",
+    transitingState: "Schiff fährt zum Ausgangshafen zur Entladung...",
+    doneState: "Container entladen und System erfolgreich befüllt!",
+    portInSub: "Folder Input", portInLabel: "Eingangshafen",
+    portOutSub: "System Output", portOutLabel: "Ausgangshafen",
+    card1Title: "Eingangshafen (Folder In)",
+    dropText: "📄 Frachtdokument hierher ziehen oder klicken",
+    dropSub: "PDF, Word oder Frachtbild",
+    parse: "🧠 Daten extrahieren & Schiff beladen (KI)",
+    card2Title: "System-Ausgangshafen",
+    outputHint: "KI-Agent steuert das Schiff und entlädt den Container in das Zielsystem via Playwright.",
+    fill: "⚡ Schiff steuern & in System entladen"
+  },
+  ru: {
+    fbPickStar: "Сначала выберите оценку ⭐",
+    fbTitle: "⭐ Оцените демо",
+    fbHint: "Нажмите на звёзды и оставьте отзыв (необязательно) — он сразу уходит владельцу",
+    fbPh: "Ваш отзыв здесь... (например: работало? в чём проблема?)",
+    fbSend: "📨 Отправить отзыв",
+    fbThanks: "✅ Спасибо! Отзыв получен.",
+    fbErr: "❌ Ошибка отправки — попробуйте снова.",
+    errNoUrl: "⚠️ Сначала введите URL системы.",
+    urlPh: "Введите URL целевой системы — https://example.com/shipping-form",
+    portInName: "Новороссийск", portOutName: "Санкт-Петербург",
+    receivedFile: "Документ успешно получен в порту ввода. Нажмите «Извлечь» для погрузки.",
+    extracting: "Извлечение и погрузка данных...",
+    sailing: "Судно движется и выгружает в систему...",
+    errConn: "Ошибка подключения в порту ввода.",
+    errUnload: "Ошибка выгрузки контейнера в порту вывода.",
+    headerDesc: "Отслеживание данных: от папки ввода, погрузки на судно до выгрузки в систему",
+    simStatusTitle: "⚓ Симуляция портового процесса",
+    waitFile: "Ожидание загрузки документа в порту ввода...",
+    loadedState: "Данные извлечены, контейнер погружен на судно! Готово к отправке.",
+    transitingState: "Судно следует в порт вывода для разгрузки контейнера...",
+    doneState: "Контейнер выгружен, система успешно заполнена!",
+    portInSub: "Folder Input", portInLabel: "Порт ввода",
+    portOutSub: "System Output", portOutLabel: "Порт вывода",
+    card1Title: "Порт ввода (Folder In)",
+    dropText: "📄 Перетащите документ сюда или нажмите",
+    dropSub: "PDF, Word или изображение",
+    parse: "🧠 Извлечь данные и погрузить на судно (ИИ)",
+    card2Title: "Порт вывода (Система)",
+    outputHint: "ИИ-агент доставит судно и выгрузит контейнер в поля целевой системы.",
+    fill: "⚡ Отправить судно и выгрузить в систему"
+  },
+  el: {
+    fbPickStar: "Διάλεξε πρώτα αστέρια ⭐",
+    fbTitle: "⭐ Βαθμολογήστε το demo",
+    fbHint: "Πατήστε τα αστέρια και γράψτε τη γνώμη σας (προαιρετικά)",
+    fbPh: "Τα σχόλιά σας εδώ... (π.χ. δούλεψε; τι πρόβλημα είχε;)",
+    fbSend: "📨 Αποστολή",
+    fbThanks: "✅ Ευχαριστούμε! Το σχόλιο ελήφθη.",
+    fbErr: "❌ Σφάλμα αποστολής — δοκιμάστε ξανά.",
+    errNoUrl: "⚠️ Εισάγετε πρώτα το URL του συστήματος.",
+    urlPh: "Εισάγετε URL συστήματος — https://example.com/shipping-form",
+    portInName: "Πειραιάς", portOutName: "Θεσσαλονίκη",
+    receivedFile: "Το έγγραφο ελήφθη επιτυχώς στο λιμάνι εισόδου. Πατήστε εξαγωγή για φόρτωση.",
+    extracting: "Εξαγωγή και φόρτωση δεδομένων...",
+    sailing: "Το πλοίο κινείται και εκφορτώνει στο σύστημα...",
+    errConn: "Σφάλμα σύνδεσης στο λιμάνι εισόδου.",
+    errUnload: "Σφάλμα εκφόρτωσης στο λιμάνι εξόδου.",
+    headerDesc: "Παρακολούθηση δεδομένων: Από τον φάκελο εισόδου, φόρτωση στο πλοίο, έως την εκφόρτωση",
+    simStatusTitle: "⚓ Ζωντανή Προσομοίωση Λιμένα",
+    waitFile: "Αναμονή φόρτωσης εγγράφου στο λιμάνι εισόδου...",
+    loadedState: "Τα δεδομένα εξήχθησαν και το container φορτώθηκε στο πλοίο!",
+    transitingState: "Το πλοίο ταξιδεύει προς το λιμάνι εξόδου...",
+    doneState: "Το container εκφορτώθηκε και το σύστημα συμπληρώθηκε!",
+    portInSub: "Folder Input", portInLabel: "Λιμάνι Εισόδου",
+    portOutSub: "System Output", portOutLabel: "Λιμάνι Εξόδου",
+    card1Title: "Λιμάνι Εισόδου (Folder In)",
+    dropText: "📄 Σύρετε έγγραφο αποστολής ή κάντε κλικ",
+    dropSub: "PDF, Word ή εικόνα",
+    parse: "🧠 Εξαγωγή δεδομένων & Φόρτωση στο πλοίο (AI)",
+    card2Title: "Λιμάνι Εξόδου (Σύστημα)",
+    outputHint: "Ο AI Agent θα οδηγήσει το πλοίο και θα εκφορτώσει τα δεδομένα στο σύστημα.",
+    fill: "⚡ Ταξίδι πλοίου & Εκφόρτωση στο σύστημα"
+  },
+  tr: {
+    fbPickStar: "Önce yıldız seçin ⭐",
+    fbTitle: "⭐ Denemeyi puanla",
+    fbHint: "Yıldızlara dokunun ve görüşünüzü yazın (isteğe bağlı) — doğrudan sahibine gider",
+    fbPh: "Geri bildiriminiz buraya... (örn. çalıştı mı? sorun neydi?)",
+    fbSend: "📨 Gönder",
+    fbThanks: "✅ Teşekkürler! Geri bildiriminiz alındı.",
+    fbErr: "❌ Gönderme hatası — lütfen tekrar deneyin.",
+    errNoUrl: "⚠️ Lütfen önce sistem URL'sini girin.",
+    urlPh: "Hedef sistem URL'sini girin — https://example.com/shipping-form",
+    portInName: "Ambarlı", portOutName: "İzmir",
+    receivedFile: "Belge Giriş Limanı'na başarıyla ulaştı. Yüklemek için çıkar'a basın.",
+    extracting: "Veriler çıkarılıyor ve yükleniyor...",
+    sailing: "Gemi hareket ediyor ve sisteme boşaltıyor...",
+    errConn: "Giriş Limanı'nda bağlantı hatası.",
+    errUnload: "Çıkış Limanı'nda konteyner boşaltma hatası.",
+    headerDesc: "Veri yolculuğunu takip edin: Giriş klasöründen gemiye konteyner yükleme ve sistem tahliyesi",
+    simStatusTitle: "⚓ Canlı Liman Simülasyonu",
+    waitFile: "Giriş Limanı'nda belge yüklenmesi bekleniyor...",
+    loadedState: "Veriler çıkarıldı ve konteyner gemiye yüklendi! Denize açılmaya hazır.",
+    transitingState: "Gemi, konteyneri sisteme boşaltmak için hareket ediyor...",
+    doneState: "Konteyner boşaltıldı ve sistem başarıyla dolduruldu!",
+    portInSub: "Folder Input", portInLabel: "Giriş Limanı",
+    portOutSub: "System Output", portOutLabel: "Çıkış Limanı",
+    card1Title: "Giriş Limanı (Folder In)",
+    dropText: "📄 Nakliye belgesini buraya sürükleyin veya seçin",
+    dropSub: "PDF, Word veya görsel",
+    parse: "🧠 Verileri Çıkar ve Gemiye Yükle (AI)",
+    card2Title: "Sistem Çıkış Limanı",
+    outputHint: "Yapay zeka ajanı gemiyi hareket ettirerek konteyneri hedef sisteme boşaltır.",
+    fill: "⚡ Gemiyi Yürüt ve Sisteme Boşalt"
+  },
+  es: {
+    fbPickStar: "Elige primero las estrellas ⭐",
+    fbTitle: "⭐ Valora la demo",
+    fbHint: "Pulsa las estrellas y escribe tu opinión (opcional) — llega directamente al dueño",
+    fbPh: "Tu opinión aquí... (¿funcionó? ¿qué falló?)",
+    fbSend: "📨 Enviar",
+    fbThanks: "✅ ¡Gracias! Opinión recibida.",
+    fbErr: "❌ Error al enviar — inténtalo de nuevo.",
+    errNoUrl: "⚠️ Introduce primero la URL del sistema.",
+    urlPh: "Introduzca URL del sistema — https://example.com/shipping-form",
+    portInName: "Valencia", portOutName: "Barcelona",
+    receivedFile: "Documento recibido con éxito en el puerto de entrada. Pulse extraer para cargar.",
+    extracting: "Extrayendo y cargando datos...",
+    sailing: "El buque se mueve y descarga en el sistema...",
+    errConn: "Error de conexión en el puerto de entrada.",
+    errUnload: "Error al descargar el contenedor en el puerto de salida.",
+    headerDesc: "Sigue la ruta de datos: Desde la carpeta de entrada, carga en el buque, hasta la descarga automática",
+    simStatusTitle: "⚓ Simulación de Puerto en Vivo",
+    waitFile: "Esperando subida de documentos en el puerto de entrada...",
+    loadedState: "¡Datos extraídos y contenedor cargado en el buque con éxito! Listo para zarpar.",
+    transitingState: "El buque está zarpando hacia el puerto de salida...",
+    doneState: "¡Contenedor descargado y sistema completado con éxito!",
+    portInSub: "Folder Input", portInLabel: "Puerto de Entrada",
+    portOutSub: "System Output", portOutLabel: "Puerto de Salida",
+    card1Title: "Puerto de Entrada (Folder In)",
+    dropText: "📄 Arrastra el documento aquí o haz clic",
+    dropSub: "PDF, Word o imagen de envío",
+    parse: "🧠 Extraer datos y cargar buque (IA)",
+    card2Title: "Puerto de Salida (Sistema)",
+    outputHint: "El Agente de IA moverá el buque y descargará el contenedor en el sistema.",
+    fill: "⚡ Zarpar buque y descargar en el sistema"
+  },
+  fr: {
+    fbPickStar: "Choisis d'abord les étoiles ⭐",
+    fbTitle: "⭐ Évaluez la démo",
+    fbHint: "Cliquez sur les étoiles et laissez votre avis (optionnel) — il arrive directement au propriétaire",
+    fbPh: "Votre avis ici... (ça a marché ? quel problème ?)",
+    fbSend: "📨 Envoyer",
+    fbThanks: "✅ Merci ! Avis bien reçu.",
+    fbErr: "❌ Erreur d'envoi — réessayez.",
+    errNoUrl: "⚠️ Entrez d'abord l'URL du système.",
+    urlPh: "Entrez l'URL du système cible — https://example.com/shipping-form",
+    portInName: "Marseille", portOutName: "Le Havre",
+    receivedFile: "Document reçu avec succès au port d'entrée. Cliquez sur extraire pour charger.",
+    extracting: "Extraction et chargement des données...",
+    sailing: "Le navire avance et décharge dans le système...",
+    errConn: "Erreur de connexion au port d'entrée.",
+    errUnload: "Erreur de déchargement du conteneur au port de sortie.",
+    headerDesc: "Suivez le parcours des données : du dossier d'entrée, chargement du navire, au déchargement",
+    simStatusTitle: "⚓ Simulation de Port en Direct",
+    waitFile: "En attente du document au port d'entrée...",
+    loadedState: "Données extraites et conteneur chargé sur le navire avec succès !",
+    transitingState: "Le navire navigue vers le port de sortie pour décharger...",
+    doneState: "Conteneur déchargé et système rempli avec succès !",
+    portInSub: "Folder Input", portInLabel: "Port d'Entrée",
+    portOutSub: "System Output", portOutLabel: "Port de Sortie",
+    card1Title: "Port d'Entrée (Folder In)",
+    dropText: "📄 Déposez le document ici ou cliquez",
+    dropSub: "PDF, Word ou image d'expédition",
+    parse: "🧠 Extraire et charger le navire (IA)",
+    card2Title: "Port de Sortie (Système)",
+    outputHint: "L'Agent IA fera naviguer le navire et déchargera le conteneur dans le système.",
+    fill: "⚡ Naviguer et décharger dans le système"
+  },
+  it: {
+    fbPickStar: "Scegli prima le stelle ⭐",
+    fbTitle: "⭐ Valuta la demo",
+    fbHint: "Tocca le stelle e scrivi il tuo parere (opzionale) — arriva direttamente al proprietario",
+    fbPh: "Il tuo parere qui... (ha funzionato? quale problema?)",
+    fbSend: "📨 Invia",
+    fbThanks: "✅ Grazie! Parere ricevuto.",
+    fbErr: "❌ Errore di invio — riprova.",
+    errNoUrl: "⚠️ Inserisci prima l'URL del sistema.",
+    urlPh: "Inserisci URL del sistema — https://example.com/shipping-form",
+    portInName: "Genova", portOutName: "Napoli",
+    receivedFile: "Documento ricevuto con successo al porto di ingresso. Clicca estrai per caricare.",
+    extracting: "Estrazione e caricamento dei dati...",
+    sailing: "La nave si muove e scarica nel sistema...",
+    errConn: "Errore di connessione al porto di ingresso.",
+    errUnload: "Errore di scarico del container al porto di uscita.",
+    headerDesc: "Traccia il viaggio dei dati: dalla cartella di input, carico nave, allo scarico nel sistema",
+    simStatusTitle: "⚓ Simulazione Porto dal Vivo",
+    waitFile: "In attesa del documento al porto di ingresso...",
+    loadedState: "Dati estratti e container caricato sulla nave con successo!",
+    transitingState: "La nave sta salpando verso il porto di uscita...",
+    doneState: "Container scaricato e sistema compilato con successo!",
+    portInSub: "Folder Input", portInLabel: "Porto di Ingresso",
+    portOutSub: "System Output", portOutLabel: "Porto di Uscita",
+    card1Title: "Porto di Ingresso (Folder In)",
+    dropText: "📄 Trascina il documento qui o clicca",
+    dropSub: "PDF, Word o immagine",
+    parse: "🧠 Estrai dati e carica nave (IA)",
+    card2Title: "Porto di Uscita (Sistema)",
+    outputHint: "L'agente IA muoverà la nave e scaricherà il container nel sistema.",
+    fill: "⚡ Salpa nave e scarica nel sistema"
+  }
+};
+
+let currentLang = 'ar';
+
+// التحكم باللغات وتحديث الأعلام في شريط اللغات وفي المركب
+const langButtons = document.querySelectorAll('.lang-btn');
+const activeFlagImg = document.getElementById('activeFlag');
+const simStateText = document.getElementById('simStateText');
+
+langButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    langButtons.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    currentLang = btn.getAttribute('data-lang');
+    const flagUrl = btn.getAttribute('data-flag');
+    activeFlagImg.src = flagUrl; // تحديث علم الدولة على المركب فوراً!
+    
+    document.documentElement.lang = currentLang;
+    document.documentElement.dir = (currentLang === 'ar') ? 'rtl' : 'ltr';
+    
+    const t = translations[currentLang];
+    if(t) {
+      document.getElementById('headerDesc').textContent = t.headerDesc;
+      document.getElementById('simStatusTitle').textContent = t.simStatusTitle;
+      if (appState === 'done') {
+        simStateText.textContent = t.doneState;
+      } else if (appState === 'loaded') {
+        simStateText.textContent = t.loadedState;
+      } else if (appState === 'received') {
+        simStateText.textContent = t.receivedFile;
+      } else {
+        simStateText.textContent = t.waitFile;
+      }
+      document.getElementById('portInLabel').textContent = t.portInSub;
+      document.getElementById('portInSub').textContent = t.portInName;
+      document.getElementById('portOutLabel').textContent = t.portOutSub;
+      document.getElementById('portOutSub').textContent = t.portOutName;
+      document.getElementById('card1Title').textContent = t.card1Title;
+      document.getElementById('dropText').textContent = t.dropText;
+      document.getElementById('dropSub').textContent = t.dropSub;
+      parseBtnText.textContent = t.parse;
+      document.getElementById('card2Title').textContent = t.card2Title;
+      document.getElementById('outputHint').textContent = t.outputHint;
+      document.getElementById('urlInput').placeholder = t.urlPh;
+      document.getElementById('fbTitle').textContent = t.fbTitle;
+      document.getElementById('fbHint').textContent = t.fbHint;
+      document.getElementById('fbComment').placeholder = t.fbPh;
+      document.getElementById('fbSendText').textContent = t.fbSend;
+      fillBtnText.textContent = t.fill;
+    }
+  });
+});
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const fileChip = document.getElementById('fileChip');
+const fileName = document.getElementById('fileName');
+const removeFileBtn = document.getElementById('removeFileBtn');
+const parseBtn = document.getElementById('parseBtn');
+const parseBtnText = document.getElementById('parseBtnText');
+const summaryBox = document.getElementById('summaryBox');
+const fieldsGrid = document.getElementById('fieldsGrid');
+const parseError = document.getElementById('parseError');
+
+const urlInput = document.getElementById('urlInput');
+const fillBtn = document.getElementById('fillBtn');
+const fillBtnText = document.getElementById('fillBtnText');
+const resultShot = document.getElementById('resultShot');
+const filledList = document.getElementById('filledList');
+const fillError = document.getElementById('fillError');
+const fillCard = document.getElementById('fillCard');
+const vesselUnit = document.getElementById('vesselUnit');
+const simArena = document.getElementById('simArena');
+const containerBox = document.getElementById('containerBox');
+
+// 👇 حط هنا رابط الـ Worker بتاعك (مثال: 'https://basyouni-api.workers.dev')
+// سيبه فاضي '' لو الصفحة والـ API على نفس الدومين
+const API_BASE = '';
+const API = (p) => API_BASE + p;
+
+let selectedFile = null;
+let extractedData = null;
+let appState = 'idle'; // idle | received | loaded | transiting | done
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files.length) setFile(fileInput.files[0]); });
+
+function setFile(file) {
+  selectedFile = file;
+  fileName.textContent = file.name;
+  fileChip.style.display = 'flex';
+  parseBtn.disabled = false;
+  simStateText.textContent = translations[currentLang].receivedFile;
+  appState = 'received';
+}
+
+removeFileBtn.addEventListener('click', () => {
+  selectedFile = null;
+  fileChip.style.display = 'none';
+  parseBtn.disabled = true;
+  fileInput.value = '';
+  simStateText.textContent = translations[currentLang].waitFile;
+  vesselUnit.classList.remove('moving');
+  containerBox.classList.remove('active');
+  simArena.classList.remove('loaded','transiting','done');
+  appState = 'idle';
+  extractedData = null;
+});
+
+// الخطوة 1: استخراج البيانات ושحن الكونتينر على المركب
+// ── تحويل ملف PDF لصور PNG (Scanner بصري داخل المتصفح) ──
+async function pdfToImages(file) {
+  const pdfjsLib = window['pdfjs-dist/build/pdf'];
+  if (!pdfjsLib) throw new Error('PDF library not loaded');
+  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+  const maxPages = Math.min(pdf.numPages, 2); // أول صفحتين كفاية لأغلب مستندات الشحن
+  const images = [];
+  for (let i = 1; i <= maxPages; i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: 2 }); // ~144 DPI — جودة كافية للـ OCR
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.floor(viewport.width);
+    canvas.height = Math.floor(viewport.height);
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+    images.push(new File([blob], 'page-' + i + '.png', { type: 'image/png' }));
+  }
+  return images;
+}
+
+parseBtn.addEventListener('click', async () => {
+  if (!selectedFile) return;
+  parseBtn.disabled = true;
+  parseBtnText.innerHTML = '<span class="spinner"></span> ' + translations[currentLang].extracting;
+  parseError.style.display = 'none';
+  summaryBox.style.display = 'none';
+  fieldsGrid.style.display = 'none';
+
+  const fd = new FormData();
+  const isPdf = selectedFile.type === 'application/pdf' || /\.pdf$/i.test(selectedFile.name);
+  try {
+    if (isPdf) {
+      const pages = await pdfToImages(selectedFile); // Scanner بصري: PDF → PNG
+      fd.append('file', pages[0]);
+      if (pages[1]) fd.append('file2', pages[1]);
+    } else {
+      fd.append('file', selectedFile);
+    }
+  } catch (e) {
+    parseBtn.disabled = false;
+    parseBtnText.textContent = translations[currentLang]?.parse || '';
+    parseError.textContent = '❌ تعذّرت قراءة ملف الـ PDF — تأكد أنه مش مشفر/تالف، أو حوّله لصورة.';
+    parseError.style.display = 'block';
+    return;
+  }
+
+  fetch(API('/api/parse'), { method: 'POST', body: fd })
+    .then(r => r.json().then(data => ({ status: r.status, data })))
+    .then(({ status, data }) => {
+      parseBtn.disabled = false;
+      parseBtnText.textContent = translations[currentLang]?.parse || '🧠 استخراج البيانات وشحنها على المركب (AI)';
+      if (!data.ok) {
+        parseError.textContent = '❌ ' + (data.message || data.error);
+        parseError.style.display = 'block';
+        return;
+      }
+      extractedData = data.data;
+      summaryBox.textContent = data.summary || '';
+      summaryBox.style.display = 'block';
+      fieldsGrid.innerHTML = '';
+      Object.keys(extractedData).forEach(k => {
+        if (!extractedData[k]) return;
+        const row = document.createElement('div');
+        row.className = 'field-row';
+        row.innerHTML = `<span class="k">${k}</span><span class="v">${extractedData[k]}</span>`;
+        fieldsGrid.appendChild(row);
+      });
+      fieldsGrid.style.display = 'grid';
+
+      // ظهور الكونتينر على المركب وتحديث الحالة العملية
+      containerBox.classList.add('active');
+      simArena.classList.add('loaded');
+      simStateText.textContent = translations[currentLang].loadedState;
+      appState = 'loaded';
+      fillCard.classList.remove('disabled-card');
+    })
+    .catch(() => {
+      parseBtn.disabled = false;
+      parseBtnText.textContent = translations[currentLang]?.parse || '🧠 استخراج البيانات وشحنها على المركب (AI)';
+      parseError.textContent = '❌ ' + translations[currentLang].errConn;
+      parseError.style.display = 'block';
+    });
+});
+
+// الخطوة 2: تحرك المركب وتفريغ البيانات في ميناء الوصول (Output)
+fillBtn.addEventListener('click', () => {
+  const url = urlInput.value.trim();
+  if (!url) {
+    fillError.textContent = translations[currentLang].errNoUrl;
+    fillError.style.display = 'block';
+    return;
+  }
+  fillError.style.display = 'none';
+  if (!extractedData) return;
+  fillBtn.disabled = true;
+  fillBtnText.innerHTML = '<span class="spinner"></span> ' + translations[currentLang].sailing;
+  fillError.style.display = 'none';
+  resultShot.style.display = 'none';
+  filledList.style.display = 'none';
+
+  // تحريك المركب بصرياً ناحية ميناء الوصول (Output)
+  vesselUnit.classList.add('moving');
+  simArena.classList.add('transiting');
+  simStateText.textContent = translations[currentLang].transitingState;
+  appState = 'transiting';
+
+  setTimeout(() => {
+    fetch(API('/api/fill'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, data: extractedData })
+    })
+      .then(r => r.json())
+      .then(data => {
+        fillBtn.disabled = false;
+        fillBtnText.textContent = translations[currentLang]?.fill || '⚡ نقل المركب وتفريغ البيانات في السيستم';
+        if (!data.ok) {
+          fillError.textContent = '❌ ' + (data.message || data.error);
+          fillError.style.display = 'block';
+          vesselUnit.classList.remove('moving');
+          simArena.classList.remove('transiting');
+          appState = 'loaded';
+          return;
+        }
+        
+        simStateText.textContent = translations[currentLang].doneState;
+        simArena.classList.remove('transiting');
+        simArena.classList.add('done');
+        appState = 'done';
+        containerBox.classList.remove('active'); // فرغنا الكونتينر
+
+        if (data.screenshot) {
+          resultShot.src = data.screenshot;
+          resultShot.style.display = 'block';
+        }
+        
+        filledList.innerHTML = '';
+        if (data.fields && data.fields.length > 0) {
+          data.fields.forEach(f => {
+            const tag = document.createElement('span');
+            tag.className = 'filled-tag';
+            tag.textContent = f;
+            filledList.appendChild(tag);
+          });
+          filledList.style.display = 'flex';
+        }
+      })
+      .catch(() => {
+        fillBtn.disabled = false;
+        fillBtnText.textContent = translations[currentLang]?.fill || '⚡ نقل المركب وتفريغ البيانات في السيستم';
+        fillError.textContent = '❌ ' + translations[currentLang].errUnload;
+        fillError.style.display = 'block';
+        vesselUnit.classList.remove('moving');
+        simArena.classList.remove('transiting');
+        appState = 'loaded';
+      });
+  }, 1200); // تأخير زمني بسيط لإعطاء فرصة للمركب للتحرك بصرياً
+});
+
+// ─────────── ⭐ قسم التقييم ───────────
+const stars = document.querySelectorAll('#stars .star');
+const fbComment = document.getElementById('fbComment');
+const fbSend = document.getElementById('fbSend');
+const fbSendText = document.getElementById('fbSendText');
+const fbError = document.getElementById('fbError');
+const fbThanks = document.getElementById('fbThanks');
+let fbRating = 0;
+
+function paintStars(n) {
+  stars.forEach(s => s.classList.toggle('lit', +s.getAttribute('data-v') <= n));
+}
+// ── فلترة التعليق: منع الرموز الممنوعة، ويُسمح فقط بـ @ والفاصلة والنقطة ──
+fbComment.addEventListener('input', () => {
+  const before = fbComment.value;
+  // نسمح: حروف (عربي/إنجليزي/أي لغة)، أرقام، مسافات، و @ , . فقط
+  const clean = before.replace(/[^\p{L}\p{N}\s@.,]/gu, '');
+  if (clean !== before) {
+    fbComment.value = clean;
+    fbComment.style.borderColor = 'var(--danger)';
+    setTimeout(() => { fbComment.style.borderColor = ''; }, 600);
+  }
+});
+
+stars.forEach(s => {
+  const v = +s.getAttribute('data-v');
+  s.addEventListener('mouseenter', () => paintStars(v));
+  s.addEventListener('click', () => { fbRating = v; paintStars(v); fbError.style.display = 'none'; });
+});
+document.getElementById('stars').addEventListener('mouseleave', () => paintStars(fbRating));
+
+fbSend.addEventListener('click', () => {
+  if (!fbRating) {
+    fbError.textContent = '⚠️ ' + (translations[currentLang].fbPickStar);
+    fbError.style.display = 'block';
+    return;
+  }
+  fbError.style.display = 'none';
+  fbSend.disabled = true;
+  fbSendText.innerHTML = '<span class="spinner"></span>';
+
+  fetch(API('/api/feedback'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rating: fbRating, comment: fbComment.value.trim().replace(/[^\p{L}\p{N}\s@.,]/gu, ''), lang: currentLang })
+  })
+    .then(r => r.json())
+    .then(d => {
+      fbSend.disabled = false;
+      fbSendText.textContent = translations[currentLang].fbSend;
+      if (!d.ok) {
+        fbError.textContent = translations[currentLang].fbErr;
+        fbError.style.display = 'block';
+        return;
+      }
+      fbThanks.textContent = translations[currentLang].fbThanks;
+      fbThanks.style.display = 'block';
+      fbComment.value = '';
+      fbRating = 0;
+      paintStars(0);
+    })
+    .catch(() => {
+      fbSend.disabled = false;
+      fbSendText.textContent = translations[currentLang].fbSend;
+      fbError.textContent = translations[currentLang].fbErr;
+      fbError.style.display = 'block';
+    });
+});
+</script>
+</body>
+</html>

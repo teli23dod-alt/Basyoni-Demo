@@ -1,0 +1,65 @@
+# دليل النشر المجاني (شغال 24/7 — مش بينام أبداً)
+
+## الخطوة 1: استضافة الصفحة (دقايق)
+1. ادخل cloudflare.com → اعمل حساب مجاني
+2. من القايمة الجنب: Workers & Pages ← Create ← Pages ← "Upload assets"
+3. ارفع ملف index.html (اسم المشروع: basyouni مثلاً)
+4. هيديك لينك زي: https://basyouni.pages.dev
+
+## الخطوة 2: مفتاح AI مجاني (Google AI Studio)
+1. ادخل aistudio.google.com ← اعمل حساب جوجل
+2. Get API Key ← Create API Key ← خده واحفظه
+   (فري تير سخي: آلاف الطلبات/يوم لموديلات Flash — كفاية للديمو)
+
+## الخطوة 3: الـ Backend (Cloudflare Worker)
+1. Workers & Pages ← Create ← Create Worker ← Deploy
+2. اضغط "Edit code" وامسح الكود واكتب فيه كود ملف worker.js المرفق
+3. من Settings ← Variables and Secrets:
+   - Name: GEMINI_API_KEY
+   - Value: (مفتاح Groq بتاعك)
+   - Type: Secret ← Deploy
+4. دلوقتي الـ Worker شغال على لينك زي: basyouni-api.workers.dev
+
+## الخطوة 4: توصيلهم (نفس الدومين — مفيش CORS)
+1. روح لإعدادات الـ Pages project ← Custom domains ← Add:
+   api.basyouni.pages.dev
+2. Workers & Pages ← الـ Worker ← Settings ← Triggers ← Add route:
+   api.basyouni.pages.dev/api/*
+3. ارجع لملف index.html وغيّر السطرين دول في آخر الجافاسكربت:
+   قبل: fetch('/api/parse', ...)  →  بعد: fetch('https://api.basyouni.pages.dev/api/parse', ...)
+   قبل: fetch('/api/fill', ...)   →  بعد: fetch('https://api.basyouni.pages.dev/api/fill', ...)
+   (واعمل re-upload للصفحة)
+4. أو الأبسط: ضيف دي في <head> للصفحة وخلاص:
+   <meta http-equiv="Content-Security-Policy" ...> — مش محتاجها أصلاً، الـ Worker فيه CORS *
+
+## خطوة بديلة أسرع (من غير Route)
+لو عايز تخطي الخطوة 4 بالكامل: في سطر fetch الأول في الجافاسكربت
+بس غيّر '/api/parse' إلى 'https://YOUR-WORKER.workers.dev/api/parse'
+و'/api/fill' إلى 'https://YOUR-WORKER.workers.dev/api/fill'
+ودوس Save & Deploy — خلاص ✅
+
+## ⚠️ ملاحظات مهمة
+- التجربة بتقبل صور (PNG/JPG/WEBP) — لأن الـ Demo بيستخدم موديل رؤية
+- فيه Rate Limit: 15 طلب/دقيقة لكل زائر — حماية لمفتاحك المجاني
+- /api/fill محاكاة (بيرجع Screenshot SVG وهمي) — التعبئة الحقيقية بـ Playwright
+  محتاجة سيرفر مدفوع، فالتجربة للناس ده كفاية جداً
+- متبعتش مفتاح Gemini لحد — ماتحطوش في أي ملف HTML أبداً
+- الموديل الافتراضي: gemini-3-flash — لو مش متاح في منطقتك غيّر سطر MODEL
+  في أول worker.js إلى gemini-2.5-flash أو gemini-3.1-flash-lite
+
+## الخطوة 5: تفعيل التقييمات (⭐ جديد)
+1. Workers & Pages ← KV ← Create namespace ← سمّه FEEDBACK
+2. روح لإعدادات الـ Worker ← Settings ← Variables and Secrets ← KV Namespace Bindings:
+   - Variable name: FEEDBACK
+   - KV namespace: اللي عملته
+3. ضيف Secret تاني اسمه ADMIN_KEY بقيمة سرية (أي كلمة، مثلاً basyouni123)
+4. Deploy
+5. تشوف التقييمات من اللينك ده (حط مفتاحك):
+   https://worker-بتاعك.workers.dev/api/feedback?key=مفتاحك
+   → هيظهرلك جدول فيه: عدد النجوم + الرأي + اللغة + الوقت + المتوسط ⭐
+
+## ملاحظة عن API_BASE
+في أول الجافاسكربت في index.html فيه سطر:
+   const API_BASE = '';
+لو الصفحة والـ Worker على دومينات مختلفة، حط رابط الـ Worker:
+   const API_BASE = 'https://worker-بتاعك.workers.dev';
